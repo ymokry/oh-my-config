@@ -76,11 +76,16 @@ check_nix() {
   fi
 }
 
-log "Starting Mac setup..."
 
-check_xcode_select
-check_config_repository
-check_nix
-
-log "Mac setup completed."
-read -p "$(log 'Press [Enter] to exit')"
+case "$1" in
+  install)
+    log "Starting Mac setup..."
+    check_xcode_select
+    check_config_repository
+    check_nix
+    log "Mac setup completed."
+    ;;
+  *)
+    echo "Usage: $0 {install}"
+    ;;
+esac
