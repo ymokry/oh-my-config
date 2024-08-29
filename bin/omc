@@ -4,88 +4,110 @@
 sudo -v
 while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
-log() {
-  echo
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $@"
+OMC_REPO_NAME="oh-my-config"
+OMC_CONFIG_DIR="$HOME/.$OMC_REPO_NAME"
+
+say() {
+  printf '%s: %s\n' "$OMC_REPO_NAME" "$1"
+}
+
+err() {
+    say "$1" >&2
+    exit 1
 }
 
 check_xcode_select() {
   if xcode-select -p &>/dev/null; then
-    log "Xcode Command Line Tools are already installed."
+    say "Xcode Command Line Tools are already installed."
     return
   fi
 
-  log "Xcode Command Line Tools not found. Installing..."
+  say "Xcode Command Line Tools not found. Installing..."
   xcode-select --install
 
   until xcode-select -p &>/dev/null; do
       sleep 5
   done
 
-  log "Xcode Command Line Tools installed successfully."
+  say "Xcode Command Line Tools installed successfully."
 }
 
 check_config_repository() {
   local github_username="ymokry"
-  local repo_name="oh-my-config"
-  local repo_https_url="https://github.com/$github_username/$repo_name.git"
-  local repo_ssh_url="git@github.com:$github_username/$repo_name.git"
-  local config_dir="$HOME/.$repo_name"
+  local repo_https_url="https://github.com/$github_username/$OMC_REPO_NAME.git"
+  local repo_ssh_url="git@github.com:$github_username/$OMC_REPO_NAME.git"
 
-  if [ -d "$config_dir" ]; then
-    log "$config_dir is already initialized."
+  if [ -d "$OMC_CONFIG_DIR" ]; then
+    say "$OMC_CONFIG_DIR is already initialized."
     return
   fi
 
-  log "$config_dir does not exist. Cloning the GitHub repository..."
-  git clone "$repo_https_url" "$config_dir"
+  say "$OMC_CONFIG_DIR does not exist. Cloning the GitHub repository..."
+  git clone "$repo_https_url" "$OMC_CONFIG_DIR"
 
   if [ $? -ne 0 ]; then
-    log "Failed to clone the repository."
-    return 1
+    err "Failed to clone the repository."
   fi
 
-  log "Repository cloned successfully into $config_dir."
+  say "Repository cloned successfully into $OMC_CONFIG_DIR."
 
-  log "Changing the remote URL from HTTPS to SSH..."
-  cd "$config_dir" || { log "Failed to change directory to $config_dir"; return 1; }
+  say "Changing the remote URL from HTTPS to SSH..."
+  cd "$OMC_CONFIG_DIR" || { say "Failed to change directory to $OMC_CONFIG_DIR"; return 1; }
   git remote set-url origin "$repo_ssh_url"
 
   if [ $? -eq 0 ]; then
-    log "Remote URL successfully changed to SSH."
+    say "Remote URL successfully changed to SSH."
   else
-    log "Failed to change the remote URL."
-    return 1
+    err "Failed to change the remote URL."
   fi
 }
 
 check_nix() {
   if command -v nix &>/dev/null; then
-    log "Nix is already installed."
+    say "Nix is already installed."
     return
   fi
 
-  log "Nix not found. Installing..."
+  say "Nix not found. Installing..."
   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 
   if [ $? -eq 0 ]; then
-    log "Nix installed successfully."
+    say "Nix installed successfully."
   else
-    log "Failed to install Nix."
-    return 1
+    err "Failed to install Nix."
   fi
 }
 
+check_omc() {
+  local link_name="omc"
+  local bin_dir="/usr/local/bin"
+
+  if [ -e "$bin_dir/$link_name" ]; then
+    say "A command named '$link_name' already exists in $bin_dir."
+    return
+  fi
+
+  say "Creating symbolic link for the script as '$link_name' in $bin_dir..."
+  sudo ln -s "$OMC_CONFIG_DIR/bin/$link_name" "$bin_dir/$link_name"
+  
+  if [ $? -eq 0 ]; then
+    say "Symbolic link created successfully."
+  else
+    err "Failed to create the symbolic link."
+    exit 1
+  fi
+}
 
 case "$1" in
   install)
-    log "Starting Mac setup..."
+    say "Installing Oh My Config..."
     check_xcode_select
     check_config_repository
     check_nix
-    log "Mac setup completed."
+    check_omc
+    say "Oh My Config installed successfully."
     ;;
   *)
-    echo "Usage: $0 {install}"
+    say "Usage: $0 {install}"
     ;;
 esac
