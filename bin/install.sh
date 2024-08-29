@@ -10,19 +10,19 @@ log() {
 }
 
 check_xcode_select() {
-  if ! xcode-select -p &>/dev/null; then
-    log "Xcode Command Line Tools not found. Installing..."
-    xcode-select --install
-
-    # Wait until the installation is complete
-    until xcode-select -p &>/dev/null; do
-      sleep 5
-    done
-
-    log "Xcode Command Line Tools installed successfully."
-  else
+  if xcode-select -p &>/dev/null; then
     log "Xcode Command Line Tools are already installed."
+    return
   fi
+
+  log "Xcode Command Line Tools not found. Installing..."
+  xcode-select --install
+
+  until xcode-select -p &>/dev/null; do
+      sleep 5
+  done
+
+  log "Xcode Command Line Tools installed successfully."
 }
 
 check_config_repository() {
@@ -55,6 +55,24 @@ check_config_repository() {
     log "Remote URL successfully changed to SSH."
   else
     log "Failed to change the remote URL."
+    return 1
+  fi
+}
+
+check_nix() {
+  if command -v nix &>/dev/null; then
+    log "Nix is already installed."
+    return
+  fi
+
+  log "Nix not found. Installing..."
+  curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+
+  if [ $? -eq 0 ]; then
+    log "Nix installed successfully."
+  else
+    log "Failed to install Nix."
+    return 1
   fi
 }
 
@@ -62,6 +80,7 @@ log "Starting Mac setup..."
 
 check_xcode_select
 check_config_repository
+check_nix
 
 log "Mac setup completed."
 read -p "$(log 'Press [Enter] to exit')"
