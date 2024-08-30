@@ -52,7 +52,7 @@ check_config_repository() {
   say "Repository cloned successfully into $OMC_CONFIG_DIR."
 
   say "Changing the remote URL from HTTPS to SSH..."
-  cd "$OMC_CONFIG_DIR" || { say "Failed to change directory to $OMC_CONFIG_DIR"; return 1; }
+  cd "$OMC_CONFIG_DIR" || { err "Failed to change directory to $OMC_CONFIG_DIR"; }
   git remote set-url origin "$repo_ssh_url"
 
   if [ $? -eq 0 ]; then
@@ -94,20 +94,19 @@ check_omc() {
     say "Symbolic link created successfully."
   else
     err "Failed to create the symbolic link."
-    exit 1
   fi
 }
 
 case "$1" in
-  install)
-    say "Installing Oh My Config..."
+  prepare)
+    say "Preparing Oh My Config..."
     check_xcode_select
     check_config_repository
     check_nix
     check_omc
-    say "Oh My Config installed successfully."
+    say "Oh My Config preparation completed."
     ;;
   *)
-    say "Usage: $0 {install}"
+    say "Usage: $0 {prepare|install}"
     ;;
 esac
